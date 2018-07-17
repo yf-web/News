@@ -1,6 +1,10 @@
 from flask_script import Manager
 from flask_migrate import Migrate, MigrateCommand
-from info import app, db
+from info import create_app, db
+
+# 定义配置文件类型
+# create_app类似于工厂函数，根据参数传入的不同来创建不同的对象
+app=create_app('development')
 
 manager = Manager(app)
 

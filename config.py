@@ -3,7 +3,6 @@ from redis import StrictRedis
 
 # 配置类
 class Config(object):
-
     # 配置数据库
     SQLALCHEMY_DATABASE_URI = 'mysql://root:74108520@127.0.0.1:3306/information'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -41,8 +40,8 @@ class TestConfig(Config):
     DEBUG = True
 
 
-config={
-    'development':DevelopmentConfig,
-    'produciton':ProductionConfig,
-    'testing':TestConfig
+config = {
+    'development': DevelopmentConfig,
+    'produciton': ProductionConfig,
+    'testing': TestConfig
 }
