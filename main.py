@@ -10,7 +10,7 @@ manager.add_command('db', MigrateCommand)
 
 @app.route('/')
 def index():
-    return 'index'
+    return 'index222222'
 
 
 if __name__ == "__main__":
