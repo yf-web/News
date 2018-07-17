@@ -5,7 +5,7 @@ import logging
 # 配置类
 class Config(object):
     # 配置数据库
-    SQLALCHEMY_DATABASE_URI = 'mysql://root:74108520@127.0.0.1:3306/information'
+    SQLALCHEMY_DATABASE_URI = 'mysql://root:mysql@127.0.0.1:3306/information'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # 配置redis
