@@ -150,9 +150,13 @@ $(function(){
 
 var imageCodeId = ""
 
-// TODO 生成一个图片验证码的编号，并设置页面中图片验证码img标签的src属性
+// 生成一个图片验证码的编号，并设置页面中图片验证码img标签的src属性
 function generateImageCode() {
-
+    //发送图片验证码请求+生成的随机值 get:/imageCode?imageCodeId=xxxx
+    //全局变量，以供后续请求短信验证码时使用
+    imageCodeId=generateUUID();
+    var src='/passport/imageCode?imageCodeId='+imageCodeId;
+    $('.get_pic_code').attr('src',src);
 }
 
 // 发送短信验证码
