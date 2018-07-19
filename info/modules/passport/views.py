@@ -3,6 +3,7 @@ import re
 
 from flask import abort, jsonify
 from flask import current_app
+from flask import json
 from flask import make_response
 from flask import request
 
@@ -59,17 +60,27 @@ def get_mesg_code():
     :return:
     """
     # 1.接收手机号、图片验证码、随机值
-    # todo 必须将json转换为字典？？？？？？
-    moblile=request.data.get('mobile')
-    image_code=request.data.get('image_code')
-    image_code_id=request.data.get('image_code_id')
+    # 这里接收的是json字符串数据，不是form表单数据
+    # json字符串转换为字典，方便后续统一处理
+    # print(request.data,type(request.data))
+
+    param_dict=json.loads(request.data)
+    # param_dict=request.json
+
+    # print(param_dict)
+
+    mobile=param_dict.get('mobile')
+    image_code=param_dict.get('image_code')
+    image_code_id=param_dict.get('image_code_id')
+
+    # print(mobile,image_code,image_code_id)
 
     # 2.验证以上数据是否为空
-    if not all([moblile,image_code,image_code_id]):
+    if not all([mobile,image_code,image_code_id]):
         return jsonify(errno=RET.PARAMERR,errmsg='参数不足')
 
     # 3.验证手机号格式是否正确
-    if not re.match(r'1[3578]\d{9}',moblile):
+    if not re.match(r'1[3578]\d{9}',mobile):
         return jsonify(errno=RET.DATAERR,errmsg='手机号错误')
 
     # 4.验证图片验证码是否正确
@@ -83,7 +94,10 @@ def get_mesg_code():
     if not real_image_code:
         return jsonify(errno=RET.NODATA,errmsg='验证码不存在')
 
-    # 6.进行验证码对比:注意大小写
+    # 6.进行验证码对比:注意大小写和编码问题
+    # print(real_image_code, image_code)
+    # if image_code.upper() != real_image_code.upper().decode():
+    # 也可在redis初始化时进行设置
     if image_code.upper() != real_image_code.upper():
         return jsonify(errno=RET.DATAERR,errmsg='验证码不正确')
 
@@ -91,13 +105,13 @@ def get_mesg_code():
     # mobile_code ={:0>6d}.format(random.randint(0,999999))
     mobile_code='%06d' % random.randint(0,999999)
     try:
-        redis_store.set('mobilbe'+moblile,mobile_code,constants.SMS_CODE_REDIS_EXPIRES)
+        redis_store.set('mobilbe'+mobile,mobile_code,constants.SMS_CODE_REDIS_EXPIRES)
     except Exception as e:
         current_app.logger.error(e)
         return jsonify(errno=RET.DATAERR,errmsg='短信验证码保存失败')
 
     # 8.发送手机验证码到第三方平台
-    result=CCP.send_template_sms(moblile,[mobile_code,constants.SMS_CODE_REDIS_EXPIRES/60],1)
+    result=CCP().send_template_sms(mobile,[mobile_code,constants.SMS_CODE_REDIS_EXPIRES/60],1)
 
     if result!=0:
         return jsonify(errno=RET.THIRDERR,errmsg='第三方系统错误')

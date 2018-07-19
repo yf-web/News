@@ -48,10 +48,10 @@ def create_app(config_name):
 
     # 初始化redis对象
     global redis_store
-    redis_store = StrictRedis(host=config[config_name].REDIS_HOST, port=config[config_name].REDIS_PORT)
+    redis_store = StrictRedis(host=config[config_name].REDIS_HOST, port=config[config_name].REDIS_PORT,decode_responses=True)
 
     # 开启CSRF
-    CSRFProtect(app)
+    # CSRFProtect(app)
 
     # 设置session
     Session(app)
