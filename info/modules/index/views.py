@@ -1,9 +1,18 @@
 # from flask import current_app
-from flask import current_app
+from flask import current_app, jsonify
 from flask import render_template
 
 from info import redis_store
 from .__init__ import index_blu
+
+
+@index_blu.route('/test')
+def test():
+    dic={
+        'name':'yl',
+        'age':12
+    }
+    return jsonify(dic)
 
 
 @index_blu.route('/favicon.ico')
