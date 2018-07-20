@@ -101,7 +101,7 @@ $(function(){
 		$(this).find('a')[0].click()
 	})
 
-    // TODO 登录表单提交
+    // 登录表单提交
     $(".login_form_con").submit(function (e) {
         e.preventDefault()
         var mobile = $(".login_form #mobile").val()
@@ -117,7 +117,28 @@ $(function(){
             return;
         }
 
+        var params={
+            'mobile':mobile,
+            'password':password
+        }
         // 发起登录请求
+        $.ajax({
+            url:'/passport/login',
+            type:'POST',
+            contentType:'application/json', //发送给服务器的数据类型
+            dataType:'json',
+            data:JSON.stringify(params),
+            success:function(resp){
+                if(resp.errno=="0"){
+                    //登录成功
+                    location.reload()
+                }else{
+                    //登录失败
+                    $("#login-password-err").html(resp.errmsg)
+                    $("#login-password-err").show()
+                }
+            }
+        })
     })
 
 

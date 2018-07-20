@@ -86,7 +86,7 @@ def get_mesg_code():
     if not re.match(r'1[3578]\d{9}',mobile):
         return jsonify(errno=RET.DATAERR,errmsg='手机号错误')
 
-    # todo 点击获取手机验证码时，实现判断该手机号是否被注册的功能
+    # 点击获取手机验证码时，实现判断该手机号是否被注册的功能
     if User.query.filter(User.mobile==mobile).first():
         return jsonify(errno=RET.DATAEXIST,errmsg='该手机号已被注册')
 
