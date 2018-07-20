@@ -53,16 +53,20 @@ class User(BaseModel, db.Model):
     # 当前用户所发布的新闻
     news_list = db.relationship('News', backref='user', lazy='dynamic')
 
+    # 对象直接访问password属性时，执行以下语句
     @property
     def password(self):
         raise AttributeError("当前属性不可读")
 
+    # 给对象的password属性赋值时，执行以下语句
     @password.setter
     def password(self, value):
         self.password_hash = generate_password_hash(value)
 
-    def check_passowrd(self, password):
-        return check_password_hash(self.password_hash, password)
+    # def check_passowrd(self, password):
+    #     return check_password_hash(self.password_hash, password)
+    def check_password(self,password):
+        return check_password_hash(self.password_hash,password)
 
     def to_dict(self):
         resp_dict = {

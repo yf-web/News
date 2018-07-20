@@ -1,15 +1,18 @@
 import random
 import re
+from datetime import datetime
 
 from flask import abort, jsonify
 from flask import current_app
 from flask import json
 from flask import make_response
 from flask import request
+from flask import session
 
-from info import constants
+from info import constants, db
 from info import redis_store
 from info.libs.yuntongxun.sms import CCP
+from info.models import User
 
 from info.utils.captcha.captcha import captcha
 from info.utils.response_code import RET
@@ -83,6 +86,10 @@ def get_mesg_code():
     if not re.match(r'1[3578]\d{9}',mobile):
         return jsonify(errno=RET.DATAERR,errmsg='手机号错误')
 
+    # todo 点击获取手机验证码时，实现判断该手机号是否被注册的功能
+    if User.query.filter(User.mobile==mobile).first():
+        return jsonify(errno=RET.DATAEXIST,errmsg='该手机号已被注册')
+
     # 4.验证图片验证码是否正确
     try:
         real_image_code=redis_store.get('imageCodeId'+image_code_id)
@@ -104,6 +111,7 @@ def get_mesg_code():
     # 7.生成手机验证码--保存起来供后续验证用
     # mobile_code ={:0>6d}.format(random.randint(0,999999))
     mobile_code='%06d' % random.randint(0,999999)
+    print('短信验证码是：%s' % mobile_code)
     try:
         redis_store.set('mobilbe'+mobile,mobile_code,constants.SMS_CODE_REDIS_EXPIRES)
     except Exception as e:
@@ -118,3 +126,110 @@ def get_mesg_code():
 
     # 9.发送成功
     return jsonify(errno=RET.OK,errmsg='信息发送成功')
+
+
+@passport_blu.route('/register',methods=['POST'])
+def register():
+    """
+    注册逻辑：
+    １．获取参数
+    ２．校验参数
+    ３．
+    :return:
+    """
+    param_dict=json.loads(request.data)
+    # param_dict=request.json
+
+    mobile=param_dict.get('mobile')
+    smscode=param_dict.get('smscode')
+    password=param_dict.get('password')
+
+    if not all([mobile,smscode,password]):
+        return jsonify(errn=RET.PARAMERR,errmsg='参数错误')
+
+    if not re.match(r'1[3578]\d{9}',mobile):
+        return jsonify(errno=RET.DATAERR,errmsg='手机号错误')
+
+    try:
+        real_smscode=redis_store.get('mobilbe'+mobile)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR,errmsg='数据库查询错误')
+
+    if not real_smscode:
+        return jsonify(errno=RET.NODATA,errmsg='短信验证码不存在或失效')
+
+    if smscode!=real_smscode:
+        return jsonify(errno=RET.DATAERR,errmsg='短信验证码输入错误')
+
+    # 验证通过后，将用户数据保存到数据库中
+    user=User()
+    user.mobile=mobile
+    # 昵称初始化为手机号
+    user.nick_name=mobile
+    # 记录最后一次登录信息
+    user.last_login=datetime.now()
+    # 密码要加密保存
+    # 在模型定义中进行密码加密的实现
+    # 使用@property装饰器和@password.setter装饰器实现对密码的加密
+    user.password=password
+
+    try:
+        db.session.add(user)
+        db.session.commit()
+    except Exception as e:
+        current_app.logger.error(e)
+        db.session.rollback()
+        return jsonify(errno=RET.DBERR,errmsg='保存数据异常')
+
+    # 注册成功后，转为登录状态，将用户信息保存在session中
+    session['user_id']=user.id
+    session['mobile']=user.mobile
+    session['nick_name']=user.nick_name
+
+    # 返回注册成功状态
+    return jsonify(errno=RET.OK,errmsg='数据保存成功')
+
+
+@passport_blu.route('/login',methods=['POST'])
+def login():
+    """
+    登录逻辑：
+    １．接收参数
+    ２．校验参数
+    ３．查询数据库验证手机号
+    4.验证密码是否正确
+    5.保存登录状态
+    ６．返回成功
+    :return:
+    """
+    params=json.loads(request.data)
+    params=request.json
+
+    mobile=params.get('mobile')
+    password=params.get('password')
+
+    if not all([mobile,password]):
+        return jsonify(errno=RET.PARAMERR,errmsg='参数不足')
+
+    if not re.match(r'1[3578]\d{9}',mobile):
+        return jsonify(errno=RET.DATAERR,errmsg='手机号错误')
+
+    try:
+        user=User.query.filter(User.mobile==mobile).first()
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR,errmsg='数据库查询失败')
+
+    if not user:
+        return jsonify(errno=RET.USERERR,errmsg='用户不存在')
+
+    # 验证密码是否正确
+    if not user.check_password(password):
+        return jsonify(errno=RET.PWDERR,errmsg='密码错误')
+
+    session['mobile']=user.mobile
+    session['user_id']=user.id
+    session['nick_name']=user.nick_name
+
+    return jsonify(errno=RET.OK,errmsg='登录成功')

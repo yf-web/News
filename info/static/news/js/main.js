@@ -33,9 +33,17 @@ $(function(){
 
 
 	// 点击输入框，提示文字上移
-	$('.form_group').on('click focusin',function(){
-		$(this).children('.input_tip').animate({'top':-5,'font-size':12},'fast').siblings('input').focus().parent().addClass('hotline');
-	})
+	// $('.form_group').on('click focusin',function(){
+	// 	$(this).children('.input_tip').animate({'top':-5,'font-size':12},'fast').siblings('input').focus().parent().addClass('hotline');
+	// })
+    $('.form_group').on('click',function(){
+    $(this).children('input').focus()
+    })
+
+    $('.form_group input').on('focusin',function(){
+    $(this).siblings('.input_tip').animate({'top':-5,'font-size':12},'fast')
+    $(this).parent().addClass('hotline');
+    })
 
 	// 输入框失去焦点，如果输入框为空，则提示文字下移
 	$('.form_group input').on('blur focusout',function(){
@@ -113,7 +121,7 @@ $(function(){
     })
 
 
-    // TODO 注册按钮点击
+    // 注册按钮点击
     $(".register_form_con").submit(function (e) {
         // 阻止默认提交操作
         e.preventDefault()
@@ -143,7 +151,29 @@ $(function(){
             return;
         }
 
+        var params={
+            'mobile':mobile,
+            'smscode':smscode,
+            'password':password
+        }
         // 发起注册请求
+        $.ajax({
+            url:'/passport/register',
+            type:'POST',
+            contentType:'application/json',
+            data:JSON.stringify(params),
+            success:function(resp){
+                if(resp.errno=='0'){
+                    //注册成功
+                    location.reload()
+                }
+                else{
+                    //注册失败
+                    $("#register-password-err").html(resp.errmsg)
+                    $("#register-password-err").show()
+                }
+        }
+        })
 
     })
 })
