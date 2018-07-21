@@ -7,6 +7,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
 from redis import StrictRedis
 from config import config
+from flask_wtf.csrf import generate_csrf
+
+from info.utils.common import index_to_class
 
 
 def setup_log(config_name):
@@ -51,10 +54,24 @@ def create_app(config_name):
     redis_store = StrictRedis(host=config[config_name].REDIS_HOST, port=config[config_name].REDIS_PORT,decode_responses=True)
 
     # 开启CSRF
-    # CSRFProtect(app)
+    # 开启后，能够自动完成从cookie中获取随机值和从表单中获取随机值，以及完成对比校验
+    # 我们只需要１．向cookie中添加随机值　２．向表单中添加随机值
+    # 没有使用表单发送数据的话，在ajax请求中添加随机值
+    # 向cookie中添加随机值是在所有的请求完成后
+
+    CSRFProtect(app)
+
+    @app.after_request
+    def add_csrf_token(response):
+        csrf_token=generate_csrf()
+        response.set_cookie('csrf_token',csrf_token)
+        return response
 
     # 设置session
     Session(app)
+
+    # 添加过滤器,添加后可以在模板文件中直接使用
+    app.add_template_filter(index_to_class,'indexClass')
 
     # 注册index_blu，什么时候用，什么时候导入
     from info.modules.index import index_blu

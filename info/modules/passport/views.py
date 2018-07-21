@@ -200,6 +200,7 @@ def login():
     ３．查询数据库验证手机号
     4.验证密码是否正确
     5.保存登录状态
+    记录最后一次登录时间
     ６．返回成功
     :return:
     """
@@ -231,6 +232,17 @@ def login():
     session['mobile']=user.mobile
     session['user_id']=user.id
     session['nick_name']=user.nick_name
+
+    # 记录最后一次登录时间，保存到数据库中
+    user.last_login=datetime.now()
+
+    # 另外一种实现方式：修改数据库，在每次请求完成之后自动提交
+    # 设置SQLAlchemy相关配置项SQLALCHEMY_COMMIT_ON_TERADOWN=True
+    # try:
+    #     db.session.commit()
+    # except Exception as e:
+    #     current_app.logger.error(e)
+    #     db.session.rollback()
 
     return jsonify(errno=RET.OK,errmsg='登录成功')
 

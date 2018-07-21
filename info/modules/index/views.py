@@ -3,8 +3,9 @@ from flask import current_app, jsonify
 from flask import render_template
 from flask import session
 
+from info import constants
 from info import redis_store
-from info.models import User
+from info.models import User, News
 from .__init__ import index_blu
 
 
@@ -54,10 +55,23 @@ def index():
         except Exception as e:
             current_app.logger.error(e)
 
+    # 实现首页新闻点击排行
+    # 查询新闻数据表，排序输出
+    news_list=[]
+    try:
+        news_list=News.query.order_by(News.clicks.desc()).limit(constants.CLICK_RANK_MAX_NEWS)
+    except Exception as e:
+        current_app.logger.error(e)
+
+    news_dict_list=[]
+    for new in news_list:
+        news_dict_list.append(new.to_basic_dict())
+
     # 接口数据最好采用字典形式传送
     data={
         # 三元表达式!!!!!!!!!!
-        'user_info':user.to_dict() if user else None
+        'user_info':user.to_dict() if user else None,
+        'news_dict_list':news_dict_list
     }
 
     return render_template('news/index.html',data=data)
