@@ -1,5 +1,6 @@
 # from flask import current_app
 from flask import current_app, jsonify
+from flask import g
 from flask import render_template
 from flask import request
 from flask import session
@@ -7,17 +8,18 @@ from flask import session
 from info import constants
 from info import redis_store
 from info.models import User, News, Category
+from info.utils.common import user_login_data
 from info.utils.response_code import RET
 from .__init__ import index_blu
 
 
-@index_blu.route('/test')
-def test():
-    dic={
-        'name':'yl',
-        'age':12
-    }
-    return jsonify(dic)
+# @index_blu.route('/test')
+# def test():
+#     dic={
+#         'name':'yl',
+#         'age':12
+#     }
+#     return jsonify(dic)
 
 
 @index_blu.route('/favicon.ico')
@@ -27,6 +29,7 @@ def favicon():
 
 
 @index_blu.route('/')
+@user_login_data
 def index():
     # logging模块输出日志信息
     # logging.debug('测试debug')
@@ -48,14 +51,15 @@ def index():
 
     # 首页登录完成后，重新加载页面，这时发送用户相关数据给前端
     # １．从session中取出用户数据
-    user_id=session.get('user_id',None)
-    user = None
-    if user_id:
-
-        try:
-            user=User.query.get(user_id)
-        except Exception as e:
-            current_app.logger.error(e)
+    # user_id=session.get('user_id',None)
+    # user = None
+    # if user_id:
+    #
+    #     try:
+    #         user=User.query.get(user_id)
+    #     except Exception as e:
+    #         current_app.logger.error(e)
+    user=g.user
 
     # 实现首页新闻点击排行
     # 查询新闻数据表，排序输出
@@ -90,7 +94,8 @@ def index():
 @index_blu.route('/news_list')
 def show_news():
     """
-    获取前端请求的新闻分类，新闻页，
+    获取前端请求的新闻分类及对应的新闻列表
+    因为有新闻分类，所以新闻列表的获取单独出来发起请求
     :return:
     """
     cid=request.args.get('cid','1')
@@ -110,7 +115,7 @@ def show_news():
     if cid!=1:
         filter_con.append(News.category_id==cid)
     # 如果cid＝＝１查询所有数据，如果cid!=1按cid查询数据
-    # 过滤条件存放在列表中，需要拆包
+    # 过滤条件存放在列表中，需要拆包!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     try:
         pagination=News.query.filter(*filter_con).order_by(News.create_time.desc()).paginate(page,per_page,False)
     except Exception as e:

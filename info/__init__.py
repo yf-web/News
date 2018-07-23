@@ -9,8 +9,6 @@ from redis import StrictRedis
 from config import config
 from flask_wtf.csrf import generate_csrf
 
-from info.utils.common import index_to_class
-
 
 def setup_log(config_name):
     """配置log"""
@@ -70,6 +68,7 @@ def create_app(config_name):
     # 设置session
     Session(app)
 
+    from info.utils.common import index_to_class
     # 添加过滤器,添加后可以在模板文件中直接使用
     app.add_template_filter(index_to_class,'indexClass')
 
@@ -80,5 +79,9 @@ def create_app(config_name):
     # 注册passport_blu
     from info.modules.passport import passport_blu
     app.register_blueprint(passport_blu)
+
+    # 注册news_blu
+    from info.modules.news import news_blu
+    app.register_blueprint(news_blu)
 
     return app
