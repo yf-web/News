@@ -6,7 +6,7 @@ from flask import session
 
 from info import constants
 from info import redis_store
-from info.models import User, News
+from info.models import User, News, Category
 from info.utils.response_code import RET
 from .__init__ import index_blu
 
@@ -69,11 +69,18 @@ def index():
     for new in news_list:
         news_dict_list.append(new.to_basic_dict())
 
+    # 动态显示分类标题
+    categories=Category().query.all()
+    category_list=[]
+    for category in categories:
+        category_list.append(category.to_dict())
+
     # 接口数据最好采用字典形式传送
     data={
         # 三元表达式!!!!!!!!!!
         'user_info':user.to_dict() if user else None,
-        'news_dict_list':news_dict_list
+        'news_dict_list':news_dict_list,
+        'category_list':category_list
     }
 
     return render_template('news/index.html',data=data)

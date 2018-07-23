@@ -43,23 +43,41 @@ $(function () {
         var nowScroll = $(document).scrollTop();
 
         if ((canScrollHeight - nowScroll) < 100) {
-            // TODO 判断页数，去更新新闻数据
+            // 判断页数，去更新新闻数据
+            // 一次滚动加载数据需要时间，如果在这个时间中，发生多次滚动，会出现多次请求数据
+            // 如果没有正在请求数据，请求数据并修改判断变量值
+            if(!data_querying){
+                data_querying=true;
+                //当前页数小于总页数才会去请求数据
+                if(cur_page<total_page){
+                    cur_page+=1;
+                    updateNewsData();
+                }
+
+            }
         }
     })
 })
 
 function updateNewsData() {
+
     // 更新新闻数据
     var params={
         'cid':currentCid,
-        'current_page':cur_page,
-        //'total_page':total_page
+        'page':cur_page,
+        // 'total_page':total_page
     }
     $.get('/news_list',params,function(resp){
         if(resp.errno=='0'){
             //请求成功
+            //重置是否请求数据判断值
+            data_querying=false;
+            total_page=resp.data.total_page
+
             //清除静态页面数据
-            // $('.list_con').html('')
+            if(cur_page==1){
+                $('.list_con').html('')
+            }
             //加载后端数据
 
             for (var i=0;i<resp.data.news_content_list.length;i++) {
