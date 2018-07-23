@@ -1,10 +1,13 @@
-var currentCid = 0; // 当前分类 id
+var currentCid = 1; // 当前分类 id
 var cur_page = 1; // 当前页
 var total_page = 1;  // 总页数
 var data_querying = true;   // 是否正在向后台获取数据
 
 
 $(function () {
+    //首页加载完成后，更新新闻信息
+    updateNewsData()
+
     // 首页分类切换
     $('.menu li').click(function () {
         var clickCid = $(this).attr('data-cid')
@@ -46,5 +49,36 @@ $(function () {
 })
 
 function updateNewsData() {
-    // TODO 更新新闻数据
+    // 更新新闻数据
+    var params={
+        'cid':currentCid,
+        'current_page':cur_page,
+        //'total_page':total_page
+    }
+    $.get('/news_list',params,function(resp){
+        if(resp.errno=='0'){
+            //请求成功
+            //清除静态页面数据
+            // $('.list_con').html('')
+            //加载后端数据
+
+            for (var i=0;i<resp.data.news_content_list.length;i++) {
+                var news = resp.data.news_content_list[i]
+                var content = '<li>'
+                content += '<a href="#" class="news_pic fl"><img src="' + news.index_image_url + '?imageView2/1/w/170/h/170"></a>'
+                content += '<a href="#" class="news_title fl">' + news.title + '</a>'
+                content += '<a href="#" class="news_detail fl">' + news.digest + '</a>'
+                content += '<div class="author_info fl">'
+                content += '<div class="source fl">来源：' + news.source + '</div>'
+                content += '<div class="time fl">' + news.create_time + '</div>'
+                content += '</div>'
+                content += '</li>'
+                $(".list_con").append(content)
+            }
+
+        }else{
+            //请求失败
+            alert(resp.errmsg)
+        }
+    })
 }

@@ -1,11 +1,13 @@
 # from flask import current_app
 from flask import current_app, jsonify
 from flask import render_template
+from flask import request
 from flask import session
 
 from info import constants
 from info import redis_store
 from info.models import User, News
+from info.utils.response_code import RET
 from .__init__ import index_blu
 
 
@@ -77,4 +79,48 @@ def index():
     return render_template('news/index.html',data=data)
 
 
+# 实现首页新闻信息显示
+@index_blu.route('/news_list')
+def show_news():
+    """
+    获取前端请求的新闻分类，新闻页，
+    :return:
+    """
+    cid=request.args.get('cid','1')
+    page=request.args.get('page','1')
+    per_page=request.args.get('per_page','10')
 
+    try:
+        cid=int(cid)
+        page=int(page)
+        per_page=int(per_page)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.PARAMERR,errmsg='参数错误')
+
+    # 查询数据库
+    filter_con=[]
+    if cid!=1:
+        filter_con.append(News.category_id==cid)
+    # 如果cid＝＝１查询所有数据，如果cid!=1按cid查询数据
+    # 过滤条件存放在列表中，需要拆包
+    try:
+        pagination=News.query.filter(*filter_con).order_by(News.create_time.desc()).paginate(page,per_page,False)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR,errmsg='数据库查询错误')
+
+    current_page=pagination.page
+    total_page=pagination.pages
+    page_content_list=pagination.items
+
+    news_content_list=[]
+    for new in page_content_list:
+        news_content_list.append(new.to_basic_dict())
+
+    data={
+        'current_page':current_page,
+        'total_page':total_page,
+        'news_content_list':news_content_list
+    }
+    return jsonify(errno=RET.OK,errmsg='成功',data=data)
