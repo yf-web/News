@@ -610,7 +610,7 @@ body{
 
 
 .collection{
-    display:inline-block;;
+    display:inline-block;
     width:98px;
     line-height:34px;
     text-indent:45px;
@@ -623,10 +623,7 @@ body{
     overflow:hidden;
 }
 
-.block-center {
-    display: block;
-    margin: 0 auto;
-}
+
 
 
 .collection:hover{
@@ -643,7 +640,7 @@ body{
     color:#f80;
     border-radius:4px;
     font-size:14px;
-    /*margin:0px 5px;*/
+    margin:0px 5px;
     background:url(../images/focus_icons.png) 21px 7px no-repeat;
     overflow: hidden;
 }
@@ -693,6 +690,10 @@ body{
     top:8px;
 }
 
+.block-center {
+    display: block;
+    margin: 0 auto;
+}
 
 
 .focused{
