@@ -78,9 +78,9 @@ def index(news_id):
     for comment in comments:
         comment_dict=comment.to_dict()
         if comment.id in user_comment_like_id_li:
-            comment_dict['is_liked']=True
+            comment_dict['is_liked']=1
         else:
-            comment_dict['is_liked']=False
+            comment_dict['is_liked']=0
 
         comment_list.append(comment_dict)
 
@@ -256,7 +256,7 @@ def comment_like():
 
     # 查询当前评论是否已被当前用户点赞
     try:
-        comment_like_del = CommentLike.query.filter(CommentLike.comment_id == comment_id,
+        comment_like_status = CommentLike.query.filter(CommentLike.comment_id == comment_id,
                                                     CommentLike.user_id == user.id).first()
     except Exception as e:
         current_app.logger.error(e)
@@ -265,7 +265,7 @@ def comment_like():
     if action=='add':
         # 将点赞记录保存在数据库中
         # 如果没有点赞，则点赞
-        if not comment_like_del:
+        if not comment_like_status:
             comment_likes=CommentLike()
             comment_likes.comment_id=comment_id
             comment_likes.user_id=user.id
@@ -276,8 +276,8 @@ def comment_like():
     else:
         # 从数据库中删除点赞记录
         # 如果点赞了，取消点赞
-        if comment_like_del:
-            db.session.delete(comment_like_del)
+        if comment_like_status:
+            db.session.delete(comment_like_status)
             # 点赞记录-1
             commented.like_count-=1
 

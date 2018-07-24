@@ -120,7 +120,14 @@ $(function(){
                     comment_html += '</div>';
                     comment_html += '<div class="comment_time fl">' + comment.create_time + '</div>';
 
-                    comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %}has_comment_up{% endif %} fr" comment_id="' + comment.id + '" news_id="' + comment.news_id + '">赞</a>';
+                    if(comment.like_count > 0){
+                        comment_html += '<a href="javascript:;" class="comment_up ' + ( comment.is_liked ? "has_comment_up":"" ) + 'fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id +'" data-likecount="' + comment.like_count +  '">comment.like_count </a>';
+                        // comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %}has_comment_up{% endif %} fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id +　'" data-likecount="' + comment.like_count +  '">comment.like_count </a>';
+                    }else{
+                        // comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %}has_comment_up{% endif %} fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id + '" data-likecount="' + comment.like_count + '">赞</a>';
+                        comment_html += '<a href="javascript:;" class="comment_up ' + ( comment.is_liked　? "has_comment_up":"" ) + 'fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id +'" data-likecount="' + comment.like_count +  '">赞</a>';
+
+                    }
                     comment_html += '<a href="javascript:;" class="comment_reply fr">回复</a>';
                     comment_html += '<form class="reply_form fl" data-commentid="' + comment.id + '" data-newsid="' + news_id + '">';
                     comment_html += '<textarea class="reply_input"></textarea>';
@@ -189,13 +196,25 @@ $(function(){
             data: JSON.stringify(params),
             success: function (resp) {
                 if (resp.errno == "0") {
-                    // 更新点赞按钮图标
+                    // 获取点赞次数
+                    var like_count = $this.attr('data-likecount');
+
                     if (action == "add") {
+                        like_count = parseInt(like_count) + 1;
                         // 代表是点赞
-                        $this.addClass('has_comment_up')
+                        $this.addClass('has_comment_up');
                     }else {
-                        $this.removeClass('has_comment_up')
+                        like_count = parseInt(like_count) - 1;
+                        $this.removeClass('has_comment_up');
                     }
+                    //　更新点赞图标
+                    $this.attr('data-likecount', like_count);
+                    if (like_count == 0) {
+                        $this.html("赞")
+                    }else {
+                        $this.html(like_count)
+                    }
+
                 }else if (resp.errno == "4101"){
                     $('.login_form_con').show();
                 }else {
@@ -258,7 +277,15 @@ $(function(){
                         comment_html += '</div>';
                         comment_html += '<div class="comment_time fl">' + comment.create_time + '</div>';
 
-                        comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %}has_comment_up{% endif %} fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id + '">赞</a>';
+                        if(comment.like_count > 0){
+                            comment_html += '<a href="javascript:;" class="comment_up ' + (comment.is_liked ? "has_comment_up":"") + 'fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id +'" data-likecount="' + comment.like_count +  '">comment.like_count </a>';
+                            // comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %} has_comment_up {% endif %} fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id +'" data-likecount="' + comment.like_count +  '">comment.like_count </a>';
+                        }else{
+                            // comment_html += '<a href="javascript:;" class="comment_up {% if comment.is_liked %} has_comment_up {% endif %} fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id + '" data-likecount="' + comment.like_count + '">赞</a>';
+                            comment_html += '<a href="javascript:;" class="comment_up ' + (comment.is_liked ? "has_comment_up":"") + ' fr" data-commentid="' + comment.id + '" data-newsid="' + comment.news_id + '" data-likecount="' + comment.like_count + '">赞</a>';
+
+                        }
+
                         comment_html += '<a href="javascript:;" class="comment_reply fr">回复</a>';
                         comment_html += '<form class="reply_form fl" data-commentid="' + comment.id + '" data-newsid="' + news_id + '">';
                         comment_html += '<textarea class="reply_input"></textarea>';
