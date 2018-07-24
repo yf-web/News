@@ -6,7 +6,7 @@ from flask import request
 from flask import session
 
 from info import constants, db
-from info.models import News, User, Comment
+from info.models import News, User, Comment, CommentLike
 from info.modules.news import news_blu
 from info.utils.common import user_login_data
 from info.utils.response_code import RET
@@ -65,9 +65,24 @@ def index(news_id):
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR,errmsg='查询数据库错误')
 
-    comment_list=[]
+    # 实现点赞数据查询
+    # 1.查询当前用户点赞了哪些评论
+    user_comment_like_id_li = []
+    if user:
+        user_comment_likes=CommentLike.query.filter(CommentLike.user_id==user.id).all()
+        for user_comment_like in user_comment_likes:
+            user_comment_like_id_li.append(user_comment_like.comment_id)
+
+    # 2.当前新闻下哪些评论被点赞了
+    comment_list = []
     for comment in comments:
-        comment_list.append(comment.to_dict())
+        comment_dict=comment.to_dict()
+        if comment.id in user_comment_like_id_li:
+            comment_dict['is_liked']=True
+        else:
+            comment_dict['is_liked']=False
+
+        comment_list.append(comment_dict)
 
     data={
         'user_info':user.to_dict() if user else None,
@@ -75,7 +90,6 @@ def index(news_id):
         'news':news.to_dict(),
         'is_collected':is_collected,
         'comment_list':comment_list
-
     }
     return render_template('/news/detail.html',data=data)
 
@@ -189,6 +203,7 @@ def comment():
         db.session.add(comment)
         db.session.commit()
     except Exception as e:
+        db.session.rollback()
         current_app.logger.error(e)
         return jsonify(errno=RET.DBERR, errmsg='保存数据异常')
 
@@ -196,3 +211,81 @@ def comment():
         'comment':comment.to_dict()  # 该字典中的内容还包含user相关信息
     }
     return jsonify(errno=RET.OK,errmsg='评论成功',data=data)
+
+
+@news_blu.route('/comment_like',methods=['POST'])
+@user_login_data
+def comment_like():
+    """
+    实现对评论的点赞功能
+    :return:
+    """
+    # 先判断用户是否登录
+    user = g.user
+    if not user:
+        return jsonify(errno=RET.SESSIONERR, errmsg='用户未登录')
+
+    # 接收参数
+    news_id = request.json.get('news_id')
+    comment_id = request.json.get('comment_id')
+    action = request.json.get('action')
+
+    # 校验参数
+    if not all([news_id, comment_id, action]):
+        return jsonify(errno=RET.PARAMERR, errmsg='参数错误1')
+
+    try:
+        news_id = int(news_id)
+        comment_id = int(comment_id)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.PARAMERR, errmsg='参数错误2')
+
+    if action not in ['add','remove']:
+        return jsonify(errno=RET.PARAMERR, errmsg='参数错误3')
+
+    # 判断当前评论
+    try:
+        commented=Comment.query.get(comment_id)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR,errmsg='查询数据库错误1')
+
+    if not commented:
+        return jsonify(errno=RET.NODATA, errmsg='评论不存在')
+
+    # 查询当前评论是否已被当前用户点赞
+    try:
+        comment_like_del = CommentLike.query.filter(CommentLike.comment_id == comment_id,
+                                                    CommentLike.user_id == user.id).first()
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg='查询数据库错误2')
+
+    if action=='add':
+        # 将点赞记录保存在数据库中
+        # 如果没有点赞，则点赞
+        if not comment_like_del:
+            comment_likes=CommentLike()
+            comment_likes.comment_id=comment_id
+            comment_likes.user_id=user.id
+
+            db.session.add(comment_likes)
+            # 点赞记录+1
+            commented.like_count+=1
+    else:
+        # 从数据库中删除点赞记录
+        # 如果点赞了，取消点赞
+        if comment_like_del:
+            db.session.delete(comment_like_del)
+            # 点赞记录-1
+            commented.like_count-=1
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg='保存数据错误')
+
+    return jsonify(errno=RET.OK, errmsg='点赞/取消成功')
