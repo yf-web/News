@@ -7,11 +7,9 @@ function getCookie(name) {
 $(function () {
     $(".pic_info").submit(function (e) {
         e.preventDefault()
-        var params={
-
-        }
         //上传头像
         // 会自动提交表单中的内容，无需设置要提交的参数
+        // 需要使用jquery.form.min.js
          $(this).ajaxSubmit({
             url: "/user/pic_info",
             type: "POST",
