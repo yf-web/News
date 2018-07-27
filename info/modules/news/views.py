@@ -91,7 +91,7 @@ def index(news_id):
         'is_collected':is_collected,
         'comment_list':comment_list
     }
-    return render_template('/news/detail.html',data=data)
+    return render_template('news/detail.html',data=data)
 
 
 @news_blu.route('/news_collect',methods=['POST'])

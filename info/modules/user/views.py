@@ -31,7 +31,7 @@ def user_set():
     data={
         'user_info':user.to_dict()
     }
-    return render_template('/news/user.html',data=data)
+    return render_template('news/user.html',data=data)
 
 
 @user_blu.route('/base_info',methods=['POST','GET'])
@@ -65,7 +65,7 @@ def base_info():
         data={
             'user_info':user.to_dict()
         }
-        return render_template('/news/user_base_info.html',data=data)
+        return render_template('news/user_base_info.html',data=data)
 
 
 @user_blu.route('/pic_info',methods=['POST','GET'])
@@ -81,7 +81,7 @@ def user_pic_info():
         data={
             'user_info':user.to_dict()
         }
-        return render_template('/news/user_pic_info.html',data=data)
+        return render_template('news/user_pic_info.html',data=data)
 
     try:
         pic_file=request.files.get('avatar').read()
@@ -117,7 +117,7 @@ def user_pic_info():
 @user_login_data
 def pass_info():
     if request.method=='GET':
-        return render_template('/news/user_pass_info.html')
+        return render_template('news/user_pass_info.html')
 
     else:
         user=g.user
@@ -177,7 +177,7 @@ def user_collection():
         'collection_news_li':collection_news_li
     }
 
-    return render_template('/news/user_collection.html',data=data)
+    return render_template('news/user_collection.html',data=data)
 
 
 @user_blu.route('/news_release',methods=['GET','POST'])
@@ -202,7 +202,7 @@ def news_release():
         data={
             'categories':category_li
             }
-        return render_template('/news/user_news_release.html',data=data)
+        return render_template('news/user_news_release.html',data=data)
 
     # 接收用户新闻文章信息
     else:
@@ -295,4 +295,4 @@ def news_list():
         'news_status_li':news_status_li
     }
 
-    return render_template('/news/user_news_list.html',data=data)
+    return render_template('news/user_news_list.html',data=data)

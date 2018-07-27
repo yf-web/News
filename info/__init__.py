@@ -103,4 +103,8 @@ def create_app(config_name):
     from info.modules.user import user_blu
     app.register_blueprint(user_blu)
 
+    # 注册admin_blu
+    from info.modules.admin import admin_blu
+    app.register_blueprint(admin_blu)
+
     return app

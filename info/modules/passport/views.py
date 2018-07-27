@@ -253,5 +253,8 @@ def logout():
     session.pop('user_id',None)
     session.pop('mobile',None)
     session.pop('nick_name',None)
+    # 针对管理员账号登录后，进入新闻页，退出登录后，清除session；若不清除is_admin，则其他用户登录后也能访问管理员页面
+    # !!!!!!!!!!!!!!!!!!!!
+    session.pop('is_admin',None)
 
     return jsonify(errno=RET.OK,errmsg='退出成功')
