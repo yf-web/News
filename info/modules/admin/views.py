@@ -1,4 +1,9 @@
+import time
+from datetime import datetime
+
+from flask import abort
 from flask import current_app
+from flask import g
 from flask import redirect
 from flask import render_template, jsonify
 from flask import request
@@ -7,6 +12,7 @@ from flask import url_for
 
 from info.models import User
 from info.modules.admin import admin_blu
+from info.utils.common import user_login_data
 from info.utils.response_code import RET
 
 
@@ -55,6 +61,68 @@ def admin_login():
 
 
 @admin_blu.route('/index')
+@user_login_data
 def admin_index():
+    """
+    管理员页面
+    :return:
+    """
+    user=g.user
 
-    return render_template('admin/index.html')
+    data={
+        'user_info':user.to_dict()
+    }
+    return render_template('admin/index.html',data=data)
+
+
+@admin_blu.route('/logout')
+def admin_logout():
+    """
+    退出登录
+    :return:
+    """
+    session.pop('user_id',None)
+    session.pop('nick_name',None)
+    session.pop('is_admin',None)
+
+    return jsonify(errno=RET.OK, errmsg='退出成功')
+
+
+@admin_blu.route('/user_count')
+def user_count():
+
+    total_count=0
+    # 查询所有用户数量--不包括管理员
+    try:
+        total_count=User.query.filter(User.is_admin==False).count()
+    except Exception as e:
+        current_app.logger.error(e)
+        abort(404)
+
+    month_count=0
+    # 查询本月注册用户数量
+    # 本月第一天的格式要与数据库中保存的时间格式相同
+    now=time.localtime()  # 获取本年本月
+    # 将字符串转换为日期格式
+    this_month_begin=datetime.strptime(('%d-%d-01' %(now.tm_year,now.tm_mon)),'%Y-%m-%d')  # 获取本年本月第一天
+    try:
+        month_count = User.query.filter(User.is_admin==False,User.create_time>=this_month_begin).count()
+    except Exception as e:
+        current_app.logger.error(e)
+        abort(404)
+
+    day_count=0
+    # 查询当天注册用户数量
+    this_day_begin = datetime.strptime(('%d-%d-%d' % (now.tm_year, now.tm_mon, now.tm_mday)), '%Y-%m-%d')  # 获取本年本月当天
+    try:
+        day_count = User.query.filter(User.is_admin==False,User.create_time>=this_day_begin).count()
+    except Exception as e:
+        current_app.logger.error(e)
+        abort(404)
+
+    data={
+        'total_count': total_count,
+        'month_count': month_count,
+        'day_count': day_count
+    }
+    return render_template('admin/user_count.html',data=data)
