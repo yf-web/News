@@ -2,6 +2,8 @@ from logging.handlers import RotatingFileHandler
 import logging
 from flask import Flask
 # 可以用来设置session保存的位置
+from flask import g
+from flask import render_template
 from flask_session import Session
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf import CSRFProtect
@@ -67,6 +69,19 @@ def create_app(config_name):
 
     # 设置session
     Session(app)
+
+    from info.utils.common import user_login_data
+
+    # 404全局页面
+    @app.errorhandler(404)
+    @user_login_data
+    def page_not_found(e):
+        user=g.user
+        data={
+            'user_info':user.to_dict()
+        }
+
+        return render_template('/news/404.html',data=data)
 
     from info.utils.common import index_to_class
     # 添加过滤器,添加后可以在模板文件中直接使用

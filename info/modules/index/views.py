@@ -111,7 +111,7 @@ def show_news():
         return jsonify(errno=RET.PARAMERR,errmsg='参数错误')
 
     # 查询数据库
-    filter_con=[]
+    filter_con=[News.status==0]
     if cid!=1:
         filter_con.append(News.category_id==cid)
     # 如果cid＝＝１查询所有数据，如果cid!=1按cid查询数据
