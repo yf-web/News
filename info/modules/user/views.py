@@ -1,5 +1,6 @@
 import errno
 
+from flask import abort
 from flask import current_app
 from flask import g, jsonify
 from flask import redirect
@@ -8,7 +9,7 @@ from flask import request
 
 from info import constants
 from info import db
-from info.models import News, Category
+from info.models import News, Category, User
 from info.modules.user import user_blu
 from info.utils.common import user_login_data
 from info.utils.image_storage import storage
@@ -296,3 +297,120 @@ def news_list():
     }
 
     return render_template('news/user_news_list.html',data=data)
+
+
+@user_blu.route('/user_follow')
+@user_login_data
+def user_follow():
+    """
+    当前用户关注的作者
+    :return:
+    """
+
+    current_pge=request.args.get('p',1)
+    try:
+        current_page=int(current_pge)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.PARAMERR, errmsg='参数异常')
+
+    paginations=g.user.followed.paginate(current_page,constants.USER_FOLLOWED_MAX_COUNT)
+
+    current_page=paginations.page
+    total_pages=paginations.pages
+    current_items=paginations.items
+
+    user_info=[]
+    for user in current_items:
+        user_info.append(user.to_dict())
+
+    data={
+        'current_page':current_page,
+        'total_pages':total_pages,
+        'user_info':user_info
+    }
+
+    return render_template('news/user_follow.html',data=data)
+
+
+@user_blu.route('/other')
+@user_login_data
+def other():
+    """
+    显示其他用户的个人界面--个人信息
+    :param user_id:
+    :return:
+    """
+    user=g.user
+
+    other_id=request.args.get('other_id',None)
+
+    other_user=None
+    try:
+        other_user=User.query.get(other_id)
+    except Exception as e:
+        current_app.logger.error(e)
+        abort(404)
+
+    if not other_user:
+        abort(404)
+
+    is_followed = False
+    if user:
+        # 判断当前用户的关注名单中是否存在当前新闻作者
+        if other_user in user.followed:
+            is_followed = True
+
+    data={
+        'is_followed':is_followed,
+        'user_info':user.to_dict() if user else None,
+        'other_info':other_user.to_dict()
+        }
+    return render_template('news/other.html',data=data)
+
+
+@user_blu.route('/other_news_list')
+def other_news_list():
+    """
+    显示用户发布的新闻列表
+    :return:
+    """
+    current_page = request.args.get('p', 1)
+    other_id = request.args.get('user_id', None)
+
+    try:
+        current_page = int(current_page)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
+
+    if not all([current_page, other_id]):
+        return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
+
+    try:
+        other = User.query.get(other_id)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg="数据查询错误")
+
+    try:
+        paginations=other.news_list.paginate(current_page,constants.OTHER_NEWS_PAGE_MAX_COUNT)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg="数据查询错误")
+
+    current_page = paginations.page
+    total_pages = paginations.pages
+    current_page_items = paginations.items
+
+    other_news_li = []
+    for other_news in current_page_items:
+        other_news_li.append(other_news.to_review_dict())
+
+    data={
+        'current_page': current_page,
+        'total_pages': total_pages,
+        'other_news_li': other_news_li
+    }
+
+    return jsonify(errno=RET.OK,errmsg='成功',data=data)

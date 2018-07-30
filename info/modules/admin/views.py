@@ -10,10 +10,11 @@ from flask import request
 from flask import session
 from flask import url_for
 
-from info import constants
-from info.models import User, News
+from info import constants, db
+from info.models import User, News, Category
 from info.modules.admin import admin_blu
 from info.utils.common import user_login_data
+from info.utils.image_storage import storage
 from info.utils.response_code import RET
 
 
@@ -334,6 +335,151 @@ def news_edit():
     return render_template('admin/news_edit.html',data=data)
 
 
-@admin_blu.route('/news_edit_detail')
+@admin_blu.route('/news_edit_detail',methods=['GET','POST'])
 def news_edit_detail():
-    return render_template('admin/news_edit_detail.html')
+    """
+    新闻板式编辑
+    :return:
+    """
+    # 新闻内容展示
+    if request.method=='GET':
+        news_id=request.args.get('news_id',None)
+        try:
+            news_id=int(news_id)
+        except Exception as e:
+            current_app.logger.error(e)
+            return render_template('admin/news_edit_detail.html', data={"errmsg": "未查询到此新闻"})
+
+        # 查询新闻
+        news = None
+        try:
+            news = News.query.get(news_id)
+        except Exception as e:
+            current_app.logger.error(e)
+
+        if not news:
+            return render_template('admin/news_edit_detail.html', data={"errmsg": "未查询到此新闻"})
+
+        # 给新闻分类添加新的属性
+        categories=Category.query.filter(Category.id!=1)
+
+        category_dict_li=[]
+        for category in categories:
+            category_dict=category.to_dict()
+            category_dict['is_selected']=False
+            if category.id==news.category_id:
+                category_dict['is_selected']=True
+            category_dict_li.append(category_dict)
+
+        data={
+            'category_dict_li':category_dict_li,
+            'news_info':news.to_dict()
+        }
+
+        return render_template('admin/news_edit_detail.html',data=data)
+
+    # 接收重新编辑的新闻内容
+    news_id=request.form.get('news_id')
+    news_title=request.form.get('title')
+    category_id=request.form.get('category_id')
+    news_digest=request.form.get('digest')
+    news_content=request.form.get('content')
+    new_image=request.files.get('index_image')  # 可以不上传，默认不修改
+
+    if not all([news_title,category_id,news_digest,news_content]):
+        return jsonify(errno=RET.PARAMERR,errmsg='参数缺失')
+
+    news = None
+    try:
+        news = News.query.get(news_id)
+    except Exception as e:
+        current_app.logger.error(e)
+
+    if not news:
+        return jsonify(errno=RET.NODATA, errmsg="未查询到新闻数据")
+
+    # 如果有上传新照片，则替换
+    if new_image:
+        try:
+            new_image_data=new_image.read()
+        except Exception as e:
+            current_app.logger.error(e)
+            return jsonify(errno=RET.PARAMERR, errmsg='参数缺失')
+
+        try:
+            key=storage(new_image_data)
+        except Exception as e:
+            current_app.logger.error(e)
+            return jsonify(errno=RET.THIRDERR, errmsg='第三方错误')
+
+        news.index_image_url=constants.QINIU_DOMIN_PREFIX+key
+
+    news.title=news_title
+    news.category_id=category_id
+    news.digest=news_digest
+    news.content=news_content
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg='数据库异常')
+
+    return jsonify(errno=RET.OK, errmsg='成功')
+
+
+@admin_blu.route('/news_type',methods=['GET','POST'])
+def news_type():
+    """
+    新闻分类编辑
+    :return:
+    """
+    # 分类显示
+    if request.method=='GET':
+
+        categories=Category.query.filter(Category.id!=1)
+
+        category_li=[]
+        for category in categories:
+            category_li.append(category.to_dict())
+
+        data={
+            'category_li':category_li
+        }
+
+        return render_template('admin/news_type.html', data=data)
+
+    # 修改内容
+    category_id=request.json.get('id')
+    category_name=request.json.get('name')
+
+    if not category_name:
+        return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
+
+    # 编辑or新增分类
+    if category_id:
+        try:
+            category=Category.query.get(category_id)
+        except Exception as e:
+            current_app.logger.error(e)
+            return jsonify(errno=RET.DBERR, errmsg="查询数据失败")
+
+        if not category:
+            return jsonify(errno=RET.NODATA, errmsg="未查询到分类信息")
+
+        category.name=category_name
+
+    else:
+        new_category=Category()
+        new_category.name=category_name
+
+        try:
+            db.session.add(new_category)
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.error(e)
+            db.session.rollback()
+            return jsonify(errno=RET.DBERR, errmsg="查询数据失败")
+
+    return jsonify(errno=RET.OK, errmsg='成功')

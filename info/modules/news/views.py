@@ -84,12 +84,22 @@ def index(news_id):
 
         comment_list.append(comment_dict)
 
+    # 判断当前用户是否关注当前新闻的作者
+    # 判断当前新闻是否有作者,爬取的新闻没有作者
+    is_followed=False
+    if g.user:
+        if news.user:
+            # 判断当前用户的关注名单中是否存在当前新闻作者
+            if news.user in user.followed:
+                is_followed=True
+
     data={
         'user_info':user.to_dict() if user else None,
         'news_dict_list':news_dict_list,
         'news':news.to_dict(),
         'is_collected':is_collected,
-        'comment_list':comment_list
+        'comment_list':comment_list,
+        'is_followed':is_followed
     }
     return render_template('news/detail.html',data=data)
 
@@ -289,3 +299,50 @@ def comment_like():
         return jsonify(errno=RET.DBERR, errmsg='保存数据错误')
 
     return jsonify(errno=RET.OK, errmsg='点赞/取消成功')
+
+
+@news_blu.route('/followed_user',methods=['POST'])
+@user_login_data
+def followed_user():
+    """
+    关注／取消关注作者
+    :return:
+    """
+    # 首先判断用户是否登录
+    user=g.user
+    if not user:
+        return jsonify(errno=RET.SESSIONERR, errmsg="用户未登录")
+
+    user_id = request.json.get("user_id")
+    action = request.json.get("action")
+
+    if not all([user_id, action]):
+        return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
+
+    if action not in ("follow", "unfollow"):
+        return jsonify(errno=RET.PARAMERR, errmsg="参数错误")
+
+    try:
+        other=User.query.get(user_id)
+    except Exception as e:
+        current_app.logger.error(e)
+        return jsonify(errno=RET.DBERR, errmsg="查询数据库失败")
+
+    if not other:
+        return jsonify(errno=RET.NODATA, errmsg="未查询到用户数据")
+
+    # 关注
+    if action=='follow':
+        if other not in user.followed:
+            user.followed.append(other)
+        else:
+            return jsonify(errno=RET.DATAEXIST, errmsg="当前已关注")
+
+    else:
+        # 取消关注
+        if other in user.followed:
+            user.followed.remove(other)
+        else:
+            return jsonify(errno=RET.DATAEXIST, errmsg="当前未关注")
+
+    return jsonify(errno=RET.OK,errmsg='成功')
